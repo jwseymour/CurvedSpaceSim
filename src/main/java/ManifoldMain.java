@@ -3,7 +3,6 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.image.PixelWriter;
@@ -15,10 +14,6 @@ import javafx.stage.Stage;
 
 import manifold.Vec3;
 import manifold.euclidean.EuclideanSpace;
-import manifold.hyperbolic.HyperboloidPoint;
-import manifold.hyperbolic.HyperbolicSpace;
-import manifold.spherical.SpherePoint;
-import manifold.spherical.SphericalSpace;
 import physics.ParticleSystem;
 import render.*;
 
@@ -40,20 +35,15 @@ public class ManifoldMain extends Application {
     private Camera camera;
     private RayTracer rayTracer;
 
-    // Geometry selection - larger radii = gentler curvature
+    // Geometry selection
     private EuclideanSpace euclidean = EuclideanSpace.INSTANCE;
-    private HyperbolicSpace hyperbolic = new HyperbolicSpace(5.0); // Larger = gentler hyperbolic curvature
-    private SphericalSpace spherical = new SphericalSpace(3.0); // R=3 means circumference = 2πR ≈ 19 units
-    private String currentGeometry = "Euclidean";
 
     // Height lock feature
     private boolean heightLocked = false;
     private double lockedHeight = 0.2;
 
-    // Particle systems (one per geometry)
+    // Particle systems
     private ParticleSystem<Vec3> euclideanParticles;
-    private ParticleSystem<HyperboloidPoint> hyperbolicParticles;
-    private ParticleSystem<SpherePoint> sphericalParticles;
 
     // Rendering
     private WritableImage image;
@@ -78,14 +68,10 @@ public class ManifoldMain extends Application {
         rayTracer = new RayTracer(camera);
         rayTracer.setResolution(WIDTH, HEIGHT);
         rayTracer.setMaxDistance(20);
-        rayTracer.setStepSize(0.02);
-        rayTracer.setFogEnabled(true);
-        rayTracer.setFogDensity(0.03);
+        // Fog removed
 
         // Initialize particle systems
         euclideanParticles = new ParticleSystem<>(euclidean);
-        hyperbolicParticles = new ParticleSystem<>(hyperbolic);
-        sphericalParticles = new ParticleSystem<>(spherical);
 
         // Setup scene
         setupScene();
@@ -101,18 +87,7 @@ public class ManifoldMain extends Application {
         VBox controls = new VBox(10);
         controls.setStyle("-fx-padding: 10; -fx-background-color: #333;");
 
-        // Geometry selector
-        Label geoLabel = new Label("Geometry:");
-        geoLabel.setTextFill(Color.WHITE);
-        ComboBox<String> geoSelector = new ComboBox<>();
-        geoSelector.getItems().addAll("Euclidean", "Hyperbolic", "Spherical");
-        geoSelector.setValue("Euclidean");
-        geoSelector.setOnAction(e -> {
-            currentGeometry = geoSelector.getValue();
-            resetCameraForGeometry();
-            setupScene();
-            needsRender = true;
-        });
+        // Geometry selector removed
 
         // Quality slider
         Label qualLabel = new Label("Preview Quality:");
@@ -147,7 +122,6 @@ public class ManifoldMain extends Application {
         instructions.setTextFill(Color.LIGHTGRAY);
 
         controls.getChildren().addAll(
-                geoLabel, geoSelector,
                 qualLabel, qualSlider,
                 heightLockCheck,
                 instructions);
@@ -200,55 +174,15 @@ public class ManifoldMain extends Application {
         rayTracer.addObject(new Sphere3D(new Vec3(0, 0.2, -3), 0.4, new Vec3(0.3, 0.8, 0.3)));
 
         // Set manifold
-        switch (currentGeometry) {
-            case "Hyperbolic":
-                rayTracer.setManifold(hyperbolic);
-                // Add particle spheres
-                for (SceneObject obj : hyperbolicParticles.getSceneObjects()) {
-                    rayTracer.addObject(obj);
-                }
-                break;
-            case "Spherical":
-                rayTracer.setManifold(spherical);
-                rayTracer.setupSphericalScene(spherical); // Use manifold-native objects for proper wrapping
-                for (SceneObject obj : sphericalParticles.getSceneObjects()) {
-                    rayTracer.addObject(obj);
-                }
-                break;
-            case "Euclidean":
-            default:
-                rayTracer.setManifold(euclidean);
-                for (SceneObject obj : euclideanParticles.getSceneObjects()) {
-                    rayTracer.addObject(obj);
-                }
-                break;
+        // rayTracer is Euclidean by default and stripped of setManifold
+        for (SceneObject obj : euclideanParticles.getSceneObjects()) {
+            rayTracer.addObject(obj);
         }
     }
 
     /**
      * Reset camera position to a good starting point for the current geometry.
      */
-    private void resetCameraForGeometry() {
-        switch (currentGeometry) {
-            case "Hyperbolic":
-                // Start near the center of the Poincaré ball for good visibility
-                camera.setPosition(new Vec3(0, 0.1, 0.2));
-                lockedHeight = 0.1;
-                break;
-            case "Spherical":
-                // Start at a reasonable position
-                camera.setPosition(new Vec3(0, 0.2, 0.5));
-                lockedHeight = 0.2;
-                break;
-            case "Euclidean":
-            default:
-                camera.setPosition(new Vec3(0, 0.2, 0.5));
-                lockedHeight = 0.2;
-                break;
-        }
-        // Look toward negative Z (forward into the scene)
-        camera.lookAt(camera.getPosition().add(new Vec3(0, 0, -1)), Vec3.Y);
-    }
 
     private void setupInput(Canvas canvas, Scene scene) {
         canvas.setFocusTraversable(true);
@@ -336,8 +270,6 @@ public class ManifoldMain extends Application {
         });
 
         canvas.setOnScroll(e -> {
-            double fov = Math.max(20, Math.min(120,
-                    rayTracer.getCamera().getForward().norm() - e.getDeltaY() * 0.1));
             // FOV adjustment could be implemented here
             needsRender = true;
         });
@@ -363,31 +295,11 @@ public class ManifoldMain extends Application {
                 camera.setPosition(new Vec3(pos.x, lockedHeight, pos.z));
             }
 
-            // In hyperbolic space, clamp position inside Poincaré ball
-            // With R=5, the Poincaré ball effective range is larger
-            if (currentGeometry.equals("Hyperbolic")) {
-                Vec3 pos = camera.getPosition();
-                double maxR = 0.85; // Keep comfortably inside the ball
-                if (pos.normSq() > maxR * maxR) {
-                    camera.setPosition(pos.normalize().scale(maxR));
-                }
-            }
-
             needsRender = true;
         }
 
         // Update particles
-        switch (currentGeometry) {
-            case "Euclidean":
-                euclideanParticles.update(dt * 0.5);
-                break;
-            case "Hyperbolic":
-                hyperbolicParticles.update(dt * 0.5);
-                break;
-            case "Spherical":
-                sphericalParticles.update(dt * 0.5);
-                break;
-        }
+        euclideanParticles.update(dt * 0.5);
 
         // Refresh scene with updated particle positions
         if (getActiveParticleSystem().size() > 0) {
@@ -400,27 +312,7 @@ public class ManifoldMain extends Application {
         Vec3 pos = camera.getPosition();
         Vec3 vel = camera.getForward().scale(0.5); // Initial velocity in camera direction
 
-        switch (currentGeometry) {
-            case "Euclidean":
-                euclideanParticles.addParticle(pos, vel, randomColor(), 0.05);
-                break;
-            case "Hyperbolic":
-                try {
-                    HyperboloidPoint hPos = hyperbolic.pointFromR3(pos);
-                    hyperbolicParticles.addParticle(hPos, vel, randomColor(), 0.05);
-                } catch (IllegalArgumentException e) {
-                    System.out.println("Cannot add particle outside Poincaré ball");
-                }
-                break;
-            case "Spherical":
-                try {
-                    SpherePoint sPos = spherical.pointFromR3(pos);
-                    sphericalParticles.addParticle(sPos, vel, randomColor(), 0.05);
-                } catch (IllegalArgumentException e) {
-                    System.out.println("Cannot add particle: " + e.getMessage());
-                }
-                break;
-        }
+        euclideanParticles.addParticle(pos, vel, randomColor(), 0.05);
 
         setupScene();
         needsRender = true;
@@ -428,21 +320,12 @@ public class ManifoldMain extends Application {
 
     private void resetParticles() {
         euclideanParticles.clear();
-        hyperbolicParticles.clear();
-        sphericalParticles.clear();
         setupScene();
         needsRender = true;
     }
 
     private ParticleSystem<?> getActiveParticleSystem() {
-        switch (currentGeometry) {
-            case "Hyperbolic":
-                return hyperbolicParticles;
-            case "Spherical":
-                return sphericalParticles;
-            default:
-                return euclideanParticles;
-        }
+        return euclideanParticles;
     }
 
     private Vec3 randomColor() {
@@ -479,7 +362,7 @@ public class ManifoldMain extends Application {
 
         // Draw HUD
         gc.setFill(Color.WHITE);
-        gc.fillText("Geometry: " + currentGeometry, 10, 20);
+        gc.fillText("Geometry: Euclidean", 10, 20);
         gc.fillText("Particles: " + getActiveParticleSystem().size(), 10, 35);
         gc.fillText(String.format("Camera: (%.2f, %.2f, %.2f)",
                 camera.getPosition().x, camera.getPosition().y, camera.getPosition().z), 10, 50);
