@@ -1,6 +1,5 @@
 plugins {
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.14'
 }
 
 repositories {
@@ -13,11 +12,7 @@ java {
     }
 }
 
-javafx {
-    version = "21"
-    modules = [ 'javafx.controls', 'javafx.graphics' ]
+application {
+    mainClass = project.hasProperty('mainClass') ? project.getProperty('mainClass') : 'com.curvedspace.app.Main'
 }
 
-application {
-    mainClass = 'SphericalWorldDemo'
-}
