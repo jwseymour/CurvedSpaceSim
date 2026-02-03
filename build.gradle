@@ -19,5 +19,5 @@ javafx {
 }
 
 application {
-    mainClass = 'ManifoldMain'
+    mainClass = 'SphericalWorldDemo'
 }
