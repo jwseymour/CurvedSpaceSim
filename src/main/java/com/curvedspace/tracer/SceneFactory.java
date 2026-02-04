@@ -208,4 +208,47 @@ public class SceneFactory {
 
         return scene;
     }
+
+    // Scene 5: Single Pyramid (Tetrahedron)
+    public static Scene createPyramidScene() {
+        Scene scene = new Scene();
+
+        // Add plain ground or infinite? Let's use Infinite Ground for context
+        double groundRadius = Math.PI / 2.0;
+        scene.add(new CheckerboardSphere(
+                new Vec4(0, -1, 0, 0),
+                groundRadius,
+                new Vec3(0.5, 0.5, 0.5),
+                new Vec3(0.3, 0.3, 0.3),
+                10.0));
+
+        // Define Pyramid Vertices.
+        // It's a tetrahedron. 4 vertices.
+        // Let's float it in front of the camera (0, 0, 1, 0).
+        // Center C = (0, 0.2, 1, 0).normalize().
+
+        // Vertices relative to center?
+        // Let's just hardcode 4 points around (0, 0, 1, 0).
+
+        double size = 0.3;
+        // Apex
+        Vec4 v0 = new Vec4(0, 0.5, 1, 0).normalize();
+        // Base triangle
+        Vec4 v1 = new Vec4(0, 0.1, 1 - size, -size).normalize();
+        Vec4 v2 = new Vec4(size, 0.1, 1 - size, size).normalize();
+        Vec4 v3 = new Vec4(-size, 0.1, 1 - size, size).normalize();
+        // Wait, regular tetrahedron is harder. Let's just use these.
+
+        // 4 Faces (Triangles)
+        // 1. v0, v1, v2
+        scene.add(new S3Triangle(v0, v1, v2, new Vec3(1, 0, 0))); // Red
+        // 2. v0, v2, v3
+        scene.add(new S3Triangle(v0, v2, v3, new Vec3(0, 1, 0))); // Green
+        // 3. v0, v3, v1
+        scene.add(new S3Triangle(v0, v3, v1, new Vec3(0, 0, 1))); // Blue
+        // 4. Base v1, v3, v2 (Orientation matter?)
+        scene.add(new S3Triangle(v1, v3, v2, new Vec3(1, 1, 0))); // Yellow
+
+        return scene;
+    }
 }
