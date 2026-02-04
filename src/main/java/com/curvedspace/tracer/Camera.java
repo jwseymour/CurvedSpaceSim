@@ -5,11 +5,11 @@ import com.curvedspace.geometry.S3Space;
 import com.curvedspace.math.Vec4;
 
 public class Camera {
-    private Vec4 pos;
-    private Vec4 forward;
-    private Vec4 up;
-    private Vec4 right;
-    private double fov; // Radians, vertical
+    protected Vec4 pos;
+    protected Vec4 forward;
+    protected Vec4 up;
+    protected Vec4 right;
+    protected double fov; // Radians, vertical
 
     public Camera(Vec4 pos, Vec4 target, Vec4 upHint, double fov) {
         this.pos = pos.normalize();
