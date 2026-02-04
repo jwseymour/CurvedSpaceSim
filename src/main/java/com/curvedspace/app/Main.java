@@ -159,6 +159,23 @@ public class Main {
             tracerRef[0] = new RayTracer(sceneRef[0], cameraRef[0], w, h);
             System.out.println("Switched to Pyramid Scene");
         }
+        if (input.isPressed(KeyEvent.VK_6)) {
+            // Triangle House
+            sceneRef[0] = SceneFactory.createTriangleHouseScene();
+
+            double hAngle = Math.asin(0.1);
+            Vec4 startPos = new Vec4(Math.cos(hAngle), 0.1, 0, 0).normalize();
+
+            cameraRef[0] = new com.curvedspace.tracer.GroundCamera(
+                    hAngle,
+                    startPos,
+                    new Vec4(0, 0.1, 1, 0),
+                    new Vec4(0, 1, 0, 0),
+                    Math.toRadians(70));
+
+            tracerRef[0] = new RayTracer(sceneRef[0], cameraRef[0], w, h);
+            System.out.println("Switched to Triangle House Scene");
+        }
 
         if (input.isPressed(KeyEvent.VK_W)) {
             cam.moveForward(moveSpeed);
