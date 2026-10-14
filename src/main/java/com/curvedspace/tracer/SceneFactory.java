@@ -43,8 +43,12 @@ public class SceneFactory {
             double d = 1.0;
             double x = Math.sin(angle) * d;
             double z = Math.cos(angle) * d;
-            scene.add(new Sphere(new Vec4(x, 0, z, 1).normalize(), 0.1, new Vec3(0.5, 0.25, 0.0)));
-            scene.add(new Sphere(new Vec4(x, 0.1, z, 1).normalize(), 0.15, new Vec3(0.0, 0.8, 0.0)));
+
+            // Stacked Spheres (Red and Blue)
+            // Bottom Sphere (Blue)
+            scene.add(new Sphere(new Vec4(x, 0, z, 1).normalize(), 0.15, new Vec3(0.1, 0.1, 0.9)));
+            // Top Sphere (Red) - positioned slightly higher in Y
+            scene.add(new Sphere(new Vec4(x, 0.2, z, 1).normalize(), 0.12, new Vec3(0.9, 0.1, 0.1)));
         }
         scene.add(new Sphere(new Vec4(0, 1, 0, 0), 0.3, new Vec3(1.0, 1.0, 0.0)));
         return scene;
@@ -199,7 +203,7 @@ public class SceneFactory {
         // --- ROAD / FENCE ---
         // Fence posts along the line x=0.
         // This Great Circle loop goes all the way around.
-        int numPosts = 40;
+        int numPosts = 20;
         for (int i = 0; i < numPosts; i++) {
             double angle = i * 2 * Math.PI / numPosts;
             // Circle in Y=0 plane (Equator) but restricted to X=0?
@@ -223,7 +227,7 @@ public class SceneFactory {
 
         // --- TREES ---
         // Spread out trees on the OTHER side of the road (x < 0).
-        int numTrees = 12;
+        int numTrees = 6;
         for (int i = 0; i < numTrees; i++) {
             double angle = i * 2 * Math.PI / numTrees + 0.5; // Offset phase
             double z = Math.cos(angle);
