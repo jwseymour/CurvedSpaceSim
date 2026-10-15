@@ -40,4 +40,17 @@ bin/
 .vscode/
 
 ### Mac OS ###
+
+
+# Node (unused tooling)
+node_modules/
+package.json
+package-lock.json
+
+# IDE
+.idea/
+
+# Local output
+screenshot_s3.png
+
 .DS_Store

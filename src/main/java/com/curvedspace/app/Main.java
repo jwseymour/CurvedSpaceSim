@@ -1,6 +1,5 @@
 package com.curvedspace.app;
 
-import com.curvedspace.math.Vec4;
 import com.curvedspace.tracer.Camera;
 import com.curvedspace.tracer.RayTracer;
 import com.curvedspace.tracer.Scene;
@@ -12,6 +11,10 @@ import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
+/**
+ * Interactive viewer: ray traces the selected scene on S^3 and lets the user
+ * fly through it with the keyboard and mouse.
+ */
 public class Main {
     private static final int WIDTH = 800; // Increased res slightly
     private static final int HEIGHT = 600;
@@ -36,16 +39,10 @@ public class Main {
 
             // Setup Initial Scene
             // Default to Hypercube as it's the "cool" one
-            final Scene[] currentScene = { SceneFactory.createHypercubeScene() };
-
-            // Camera container
-            final Camera[] camera = { new Camera(
-                    new Vec4(0, 0, 0, 1),
-                    new Vec4(0, 0, 1, 0), // Target
-                    new Vec4(0, 1, 0, 0), // Up Hint
-                    Math.toRadians(70)) };
-
-            final RayTracer[] tracer = { new RayTracer(currentScene[0], camera[0], WIDTH, HEIGHT) };
+            final Scene[] currentScene = { null };
+            final Camera[] camera = { null };
+            final RayTracer[] tracer = { null };
+            loadScene(0, currentScene, camera, tracer, WIDTH, HEIGHT);
 
             // Render Loop using Timer
             Timer timer = new Timer(16, e -> { // ~60 FPS target
@@ -55,6 +52,18 @@ public class Main {
             });
             timer.start();
         });
+    }
+
+    /** Display names of the scenes bound to keys 1-6. */
+    static final String[] SCENE_NAMES = { "Hypercube", "Earth", "Infinite Earth", "City", "Pyramid",
+            "Triangle House" };
+
+    /** Replaces the scene, camera and tracer with those for scene {@code index}. */
+    private static void loadScene(int index, Scene[] sceneRef, Camera[] cameraRef, RayTracer[] tracerRef,
+            int w, int h) {
+        sceneRef[0] = SceneFactory.create(index);
+        cameraRef[0] = SceneFactory.createCamera(index);
+        tracerRef[0] = new RayTracer(sceneRef[0], cameraRef[0], w, h);
     }
 
     private static void update(Camera[] cameraRef, InputHandler input, BufferedImage image, Scene[] sceneRef,
@@ -76,105 +85,12 @@ public class Main {
             cam.pitch(-dy * mouseSense);
         }
 
-        // Scene Switching
-        if (input.isPressed(KeyEvent.VK_1)) {
-            if (!sceneRef[0].getClass().getName().contains("Hypercube")) {
-                sceneRef[0] = SceneFactory.createHypercubeScene();
-                // Reset camera
-                cameraRef[0] = new Camera(new Vec4(0, 0, 0, 1), new Vec4(0, 0, 1, 0), new Vec4(0, 1, 0, 0),
-                        Math.toRadians(70));
-                tracerRef[0] = new RayTracer(sceneRef[0], cameraRef[0], w, h);
-                System.out.println("Switched to Hypercube Scene");
+        // Scene Switching (keys 1-6)
+        for (int i = 0; i < SCENE_NAMES.length; i++) {
+            if (input.isPressed(KeyEvent.VK_1 + i)) {
+                loadScene(i, sceneRef, cameraRef, tracerRef, w, h);
+                System.out.println("Switched to " + SCENE_NAMES[i] + " scene");
             }
-        }
-        if (input.isPressed(KeyEvent.VK_2)) {
-            // Earth Scene
-            sceneRef[0] = SceneFactory.createEarthScene();
-            cameraRef[0] = new Camera(new Vec4(0, 0, 0, 1), new Vec4(0, 0, 1, 0), new Vec4(0, 1, 0, 0),
-                    Math.toRadians(70));
-            tracerRef[0] = new RayTracer(sceneRef[0], cameraRef[0], w, h);
-            System.out.println("Switched to Earth Scene");
-        }
-        if (input.isPressed(KeyEvent.VK_3)) {
-            // Infinite Earth Scene
-            sceneRef[0] = SceneFactory.createGreatSphereScene();
-
-            // Use GroundCamera!
-            // Height = equator latitude?
-            // Ground is centered at south pole. Equator is dist pi/2.
-            // We want to be slightly "above" the equator (y > 0)?
-            // If ground radius is pi/2, then surface is at equator (y=0).
-            // Let's float at y = 0.1 (sin(angle)=0.1).
-            double height = Math.asin(0.1);
-            // Pos must satisfy y=0.1. e.g. (0.995, 0.1, 0, 0)
-            Vec4 startPos = new Vec4(Math.cos(height), 0.1, 0, 0).normalize();
-
-            cameraRef[0] = new com.curvedspace.tracer.GroundCamera(
-                    height,
-                    startPos,
-                    new Vec4(0, 0.1, 1, 0), // Look along z, keeping y approx const
-                    new Vec4(0, 1, 0, 0), // Up is Y axis
-                    Math.toRadians(70));
-
-            tracerRef[0] = new RayTracer(sceneRef[0], cameraRef[0], w, h);
-            System.out.println("Switched to Infinite Earth Scene");
-        }
-        if (input.isPressed(KeyEvent.VK_4)) {
-            // "Real Life" City Scene
-            sceneRef[0] = SceneFactory.createCityScene();
-
-            // GroundCamera also needed here!
-            double height = 0.1;
-            // Pos must satisfy y=sin(0.1) ~ 0.1? No, we used y=heightY in GroundCamera.
-            // If we use asin(0.1), then y=0.1.
-            // Let's use same settings as Inf Earth.
-            double hAngle = Math.asin(0.1);
-            Vec4 startPos = new Vec4(Math.cos(hAngle), 0.1, 0, 0).normalize();
-
-            cameraRef[0] = new com.curvedspace.tracer.GroundCamera(
-                    hAngle,
-                    startPos,
-                    new Vec4(0, 0.1, 1, 0),
-                    new Vec4(0, 1, 0, 0),
-                    Math.toRadians(70));
-
-            tracerRef[0] = new RayTracer(sceneRef[0], cameraRef[0], w, h);
-            System.out.println("Switched to City Scene");
-        }
-        if (input.isPressed(KeyEvent.VK_5)) {
-            // Pyramid Scene
-            sceneRef[0] = SceneFactory.createPyramidScene();
-
-            // Use GroundCamera
-            double hAngle = Math.asin(0.1);
-            Vec4 startPos = new Vec4(Math.cos(hAngle), 0.1, 0, 0).normalize();
-
-            cameraRef[0] = new com.curvedspace.tracer.GroundCamera(
-                    hAngle,
-                    startPos,
-                    new Vec4(0, 0.1, 1, 0),
-                    new Vec4(0, 1, 0, 0),
-                    Math.toRadians(70));
-
-            tracerRef[0] = new RayTracer(sceneRef[0], cameraRef[0], w, h);
-            System.out.println("Switched to Pyramid Scene");
-        }
-        if (input.isPressed(KeyEvent.VK_6)) {
-            // Triangle House
-            sceneRef[0] = SceneFactory.createTriangleHouseScene();
-
-            double hAngle = Math.asin(0.1);
-            Vec4 startPos = new Vec4(Math.cos(hAngle), 0.1, 0, 0).normalize();
-
-            cameraRef[0] = new com.curvedspace.tracer.GroundCamera(
-                    hAngle,
-                    startPos,
-                    new Vec4(0, 0.1, 1, 0),
-                    new Vec4(0, 1, 0, 0),
-                    Math.toRadians(70));
-
-            tracerRef[0] = new RayTracer(sceneRef[0], cameraRef[0], w, h);
-            System.out.println("Switched to Triangle House Scene");
         }
 
         if (input.isPressed(KeyEvent.VK_W)) {

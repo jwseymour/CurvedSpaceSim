@@ -5,6 +5,35 @@ import com.curvedspace.math.Vec4;
 
 public class SceneFactory {
 
+    private static final double FOV = Math.toRadians(70);
+
+    /** Builds scene {@code index} (0 = Hypercube ... 5 = Triangle House). */
+    public static Scene create(int index) {
+        switch (index) {
+            case 0: return createHypercubeScene();
+            case 1: return createEarthScene();
+            case 2: return createGreatSphereScene();
+            case 3: return createCityScene();
+            case 4: return createPyramidScene();
+            case 5: return createTriangleHouseScene();
+            default: throw new IllegalArgumentException("No scene " + index);
+        }
+    }
+
+    /**
+     * Builds the starting camera for scene {@code index}: a free-flying camera
+     * for the first two scenes, and a camera locked just above the ground
+     * (the equator of the ground sphere) for the rest.
+     */
+    public static Camera createCamera(int index) {
+        if (index < 2) {
+            return new Camera(new Vec4(0, 0, 0, 1), new Vec4(0, 0, 1, 0), new Vec4(0, 1, 0, 0), FOV);
+        }
+        double height = Math.asin(0.1);
+        Vec4 startPos = new Vec4(Math.cos(height), 0.1, 0, 0).normalize();
+        return new GroundCamera(height, startPos, new Vec4(0, 0.1, 1, 0), new Vec4(0, 1, 0, 0), FOV);
+    }
+
     public static Scene createHypercubeScene() {
         Scene scene = new Scene();
         // 16 vertices of a tesseract
