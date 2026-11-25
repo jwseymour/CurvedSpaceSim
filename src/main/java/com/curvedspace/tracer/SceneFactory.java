@@ -181,8 +181,7 @@ public class SceneFactory {
                 new Vec3(0.1, 0.4, 0.1),
                 16.0));
 
-        // Offset House to the side (relative to "Road")
-        // Road is along x=0. House at x=0.4?
+        // The road runs along x=0 and the house sits off to one side.
         double houseX = 0.4;
 
         double W = 0.2;
@@ -230,19 +229,12 @@ public class SceneFactory {
         addQuad(scene, d00, d10, d11, d01, doorColor);
 
         // --- ROAD / FENCE ---
-        // Fence posts along the line x=0.
-        // This Great Circle loop goes all the way around.
+        // Fence posts along the line x=0, all the way round the great circle.
         int numPosts = 20;
         for (int i = 0; i < numPosts; i++) {
             double angle = i * 2 * Math.PI / numPosts;
-            // Circle in Y=0 plane (Equator) but restricted to X=0?
-            // X=0, Y=0 is a circle in Z-W plane. Vertices: (0, 0, cos t, sin t).
-            // But we want it on the ground. Ground is surface of sphere centered at
-            // (0,-1,0,0).
-            // Equator (y=0) is ON the ground.
-            // So circle x=0, y=0 is ON the ground.
-
-            // Posts along (0, 0, cos t, sin t).
+            // The ground is the equator y=0, so the circle x=0, y=0 lies on it.
+            // Its points are (0, 0, cos t, sin t).
             double z = Math.cos(angle);
             double w = Math.sin(angle);
 

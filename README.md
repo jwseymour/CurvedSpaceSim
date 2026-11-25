@@ -1,6 +1,6 @@
 # CurvedSpaceSim
 
-A real-time ray tracer for **curved space**. Instead of rendering a flat 3D world, it renders the inside of the 3-sphere **S³**, a closed universe where walking in a straight line eventually brings you back to where you started. It is written in plain Java with no external libraries, and the math is implemented from scratch.
+A ray tracer for **curved space** that you can walk around in. Instead of rendering a flat 3D world, it renders the inside of the 3-sphere **S³**, a closed universe where walking in a straight line eventually brings you back to where you started. It is written in plain Java with no external libraries, and the math is implemented from scratch.
 
 <p align="center">
   <img src="docs/images/6-triangle-house.png" alt="A house, trees and fence posts rendered on S^3" width="720">
@@ -63,6 +63,27 @@ To render every scene to PNG without opening a window (this is how the images ab
 ./gradlew run -PmainClass=com.curvedspace.app.RenderScenes --args="docs/images"
 ```
 
+### Tests
+
+```bash
+./gradlew test
+```
+
+The tests cover ray intersection with spheres and triangles, including hits that are more than half way round the sphere.
+
+## Speed
+
+Each scanline is a separate task on a thread pool. Times for one 960×540 frame on my laptop (4-core Intel i7, 8 threads with hyperthreading):
+
+| Threads | Triangle House | City |
+|---|---|---|
+| 1 | 890 ms | 337 ms |
+| 2 | 576 ms | 220 ms |
+| 4 | 322 ms | 102 ms |
+| 8 | 228 ms | 86 ms |
+
+So four threads is about three times faster than one, and it runs at a few frames a second. There is no acceleration structure, so every ray is tested against every object.
+
 ## Project layout
 
 ```
@@ -79,7 +100,7 @@ src/main/java/com/curvedspace/
 - Shadows and reflections
 - Per-pixel supersampling
 - Hyperbolic space (H³) as a second geometry
-- Unit tests for the geometry primitives
+- A bounding structure, so rays skip objects they can't hit
 
 ## License
 

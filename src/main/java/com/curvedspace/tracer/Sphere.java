@@ -29,55 +29,32 @@ public class Sphere implements S3Object {
 
     @Override
     public Intersection intersect(Ray ray) {
-        // Equation: (O cos t + D sin t) . C = cos(rho)
-        // (O.C) cos t + (D.C) sin t = cos(rho)
+        // A point is on the sphere when its dot product with the centre is
+        // cos(radius). Along the ray O cos t + D sin t that gives
+        //   a cos t + b sin t = cos(radius),  a = O.C,  b = D.C
         double a = ray.origin.dot(center);
         double b = ray.dir.dot(center);
 
+        // The left side is R sin(t + theta0) with R = sqrt(a^2 + b^2), so it
+        // never gets past R in either direction. If cos(radius) is outside
+        // that range the ray misses.
         double R = Math.sqrt(a * a + b * b);
+        if (Math.abs(cosRadius) > R)
+            return null;
 
-        // Impossible to hit if max value < cos(rho)
-        // Note: cos(rho) can be negative if rho > pi/2
-        // Max value of a cos t + b sin t is R.
-        // If cosRadius > R, then no intersection (sphere is 'above' the ray's plane?)
-        if (R < Math.abs(cosRadius)) { // Use abs? No, R is always positive amplitude.
-            // If cosRadius is 0.5, and R is 0.1, max value is 0.1. Can't reach 0.5.
-            // If cosRadius is -0.5, and R is 0.1, min value is -0.1. Can't reach -0.5.
-            if (Math.abs(cosRadius) > R)
-                return null;
-        }
-
-        // sin(t + theta0) = cos(rho) / R
-        // where sin(theta0) = a/R, cos(theta0) = b/R -> theta0 = atan2(a, b)
         double theta0 = Math.atan2(a, b);
+        double alpha = Math.asin(cosRadius / R);
 
-        double val = cosRadius / R;
-        if (Math.abs(val) > 1.0)
-            return null; // Should be covered by R check but floating point safety
+        // The two solutions in one trip round the great circle.
+        double t1 = normalizeAngle(alpha - theta0);
+        double t2 = normalizeAngle(Math.PI - alpha - theta0);
 
-        double alpha = Math.asin(val);
-
-        // t + theta0 = alpha OR t + theta0 = pi - alpha
-        // t = alpha - theta0
-        // t = pi - alpha - theta0
-
-        double t1 = alpha - theta0;
-        double t2 = Math.PI - alpha - theta0;
-
-        // Normalize periods to find smallest positive t
-        t1 = normalizeAngle(t1);
-        t2 = normalizeAngle(t2);
-
-        // We generally want the smallest t.
-        // However, we must check if one is "entering" and one is "exiting" or both are
-        // valid hits.
-        // In opaque rendering, the smallest t > epsilon is the hit.
-
+        // Nearest one that isn't at the ray's own origin.
         double t = Math.min(t1, t2);
         if (t < MathUtil.EPSILON) {
             t = Math.max(t1, t2);
             if (t < MathUtil.EPSILON)
-                return null; // Both behind or too close
+                return null;
         }
 
         Vec4 hitPoint = ray.getPoint(t);
@@ -86,7 +63,7 @@ public class Sphere implements S3Object {
         return new Intersection(t, hitPoint, normal, this);
     }
 
-    // Convert angle to [0, 2pi) or similar logic to find smallest positive
+    // Wrap an angle into [0, 2pi)
     private double normalizeAngle(double t) {
         while (t < 0)
             t += 2 * Math.PI;
@@ -96,22 +73,8 @@ public class Sphere implements S3Object {
     }
 
     private Vec4 computeNormal(Vec4 p) {
-        // The normal in S^3 at p pointing away from center.
-        // It is the tangent vector at p of the geodesic from center to p.
-        // v_tangent = p - (p.c)c ?? No.
-        // Geodesic: G(s) starting at c to p.
-        // At s=radius, G(radius) = p.
-        // Tangent is G'(radius).
-        // If we project c onto tangent space of p?
-        // tangent = normalize(p - c * (p.c) / ???)
-        // Let's use S3Space.tangent(p, c) -> vector at p pointing back to c (mostly).
-        // Then negate it to point away.
-
-        // Tangent at p pointing TOWARDS c:
-        // T_in = tangent(p, c) = c - p(c.p)
-        // Normal (outwards) is -T_in.
-        // N = p(c.p) - c
-
+        // Tangent at p pointing back towards the centre is c - p(c.p).
+        // The outward normal is the opposite of that.
         double dot = center.dot(p);
         Vec4 n = p.scale(dot).minus(center);
         return n.normalize();

@@ -1,5 +1,6 @@
 package com.curvedspace.tracer;
 
+import com.curvedspace.math.MathUtil;
 import com.curvedspace.math.Vec3;
 import com.curvedspace.math.Vec4;
 import com.curvedspace.geometry.Ray;
@@ -16,25 +17,14 @@ public class S3Triangle implements S3Object {
         this.v[2] = v2;
         this.color = color;
 
-        // 1. Calculate Plane Normal
-        // This is the normal to the 3D subspace spanned by v0, v1, v2.
-        // If v0,v1,v2 are close, this is stable.
+        // Normal to the 3-plane through the origin and the three vertices.
         this.normal = Vec4.cross(v0, v1, v2).normalize();
 
-        // 2. Calculate Edge Plane Normals
-        // Edge 0-1: Plane passing through 0, 1, and Origin.
-        // Wait, to distinguish "inside/outside" relative to v2?
-        // We want a normal N_01 such that P.N_01 > 0 for P on same side as v2.
-        // N_01 must be orthogonal to v0 and v1.
-        // And it must lie IN the triangle's 3-plane (so orthogonal to this.normal).
-        // So N_01 is orthogonal to v0, v1, normal.
-        // N_01 = cross(v0, v1, normal).
-
-        // Edge 0: v0 -> v1. Check v2.
+        // Each edge gets a normal that lies in that 3-plane, is orthogonal to both
+        // ends of the edge, and points towards the third vertex. A point is inside
+        // the triangle when it is on the positive side of all three.
         this.edgeNormals[0] = calcEdgeNormal(v[0], v[1], v[2]);
-        // Edge 1: v1 -> v2. Check v0.
         this.edgeNormals[1] = calcEdgeNormal(v[1], v[2], v[0]);
-        // Edge 2: v2 -> v0. Check v1.
         this.edgeNormals[2] = calcEdgeNormal(v[2], v[0], v[1]);
     }
 
@@ -48,44 +38,36 @@ public class S3Triangle implements S3Object {
 
     @Override
     public Intersection intersect(Ray ray) {
-        // Ray: O cos t + D sin t
-        // Plane: P . N = 0
-        // (O.N) cos t + (D.N) sin t = 0
-
+        // The ray is O cos t + D sin t, so it meets the triangle's 3-plane where
+        // (O.N) cos t + (D.N) sin t = 0, i.e. tan t = -(O.N) / (D.N).
         double on = ray.origin.dot(normal);
         double dn = ray.dir.dot(normal);
 
-        // solve: on + dn * tan(t) = 0 => tan(t) = -on/dn
-        if (Math.abs(dn) < 1e-9)
-            return null; // Parallel
+        // Both zero means the whole geodesic lies in the plane.
+        if (Math.abs(on) < 1e-9 && Math.abs(dn) < 1e-9)
+            return null;
 
         double t = Math.atan2(-on, dn);
-        // atan2 returns value in -pi to pi.
-        // We want smallest positive t.
-        if (t < 0)
-            t += Math.PI; // Intersects at t and t+pi (antipodal).
-        // Check both? Usually we only see "front"? But S^3 is transparent.
-        // Let's take the first hit.
-        // Wait, Ray has max distance? Not really, usually PI.
-        // If the triangle is "behind" us, t might be > pi / 2?
+        if (t < MathUtil.EPSILON)
+            t += Math.PI;
 
-        // Let's refine t. atan2(y, x) -> tan = y/x.
-        // atan2(-on, dn) gives angle where sin ~ -on, cos ~ dn.
-        // Check: (O cos t + D sin t).N = on * dn - dn * on = 0? No.
-        // Check equation: on * cos + dn * sin = 0.
-        // sin/cos = -on/dn.
-
-        // Intersection point
-        Vec4 p = ray.getPoint(t);
-
-        // Check barycentric / edge sides
-        for (int i = 0; i < 3; i++) {
-            if (p.dot(edgeNormals[i]) < -1e-9) {
-                return null; // Outside
-            }
+        // A great circle crosses the plane twice, at antipodal points half a turn
+        // apart. Only one of them can be inside the triangle, and it may be the
+        // far one, so try both.
+        for (int k = 0; k < 2; k++, t += Math.PI) {
+            Vec4 p = ray.getPoint(t);
+            if (inside(p))
+                return new Intersection(t, p, this.normal, this);
         }
+        return null;
+    }
 
-        return new Intersection(t, p, this.normal, this);
+    private boolean inside(Vec4 p) {
+        for (Vec4 edgeNormal : edgeNormals) {
+            if (p.dot(edgeNormal) < -1e-9)
+                return false;
+        }
+        return true;
     }
 
     @Override

@@ -15,10 +15,7 @@ public class CheckerboardSphere extends Sphere {
 
     @Override
     public Vec3 getColor(Vec4 point) {
-        // Project point to local coords or use angles?
-        // Simple 4D checkerboard: simple based on signs of coordinates?
-        // Or based on angles?
-        // Let's use 4D position checkerboard.
+        // Checkerboard on the 4D coordinates of the point
         double s = scale;
         boolean cx = (Math.floor(point.x * s) % 2 == 0);
         boolean cy = (Math.floor(point.y * s) % 2 == 0);

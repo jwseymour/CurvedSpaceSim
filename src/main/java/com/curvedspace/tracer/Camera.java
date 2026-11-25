@@ -18,39 +18,25 @@ public class Camera {
     }
 
     public void lookAt(Vec4 target, Vec4 upHint) {
-        // Compute forward vector in tangent space of pos
-        // Direction from pos to target
-        // Tangent of geodesic at pos
+        // Forward is the tangent at pos of the geodesic towards the target.
         this.forward = S3Space.tangent(pos, target).normalize();
 
-        // Project upHint to tangent space
+        // Up is the hint projected into the tangent space, then made
+        // orthogonal to forward.
         Vec4 upProj = S3Space.tangent(pos, upHint);
-
-        // Orthogonalize up against forward
-        // up = upProj - forward * (upProj . forward)
         this.up = S3Space.tangent(forward, upProj).normalize();
 
-        // Right vector?
-        // In 4D we need a 3D tangent space at 'pos'.
-        // We have forward and up. We need a 3rd vector 'right'.
-        // We can define 'right' using the 4D mechanics?
-        // Or simply cross product if we treat the 4D space specially?
-        // Wait, the tangent space is 3D (R^3).
-        // We have 2 vectors: F, U. We need R orthogonal to both.
-        // We also have 'pos' which is normal to the tangent space.
-        // So R is orthogonal to pos, F, U.
-        // We can use a generalized cross product in R^4?
-        // Cross(A, B, C) -> D.
-        // Right = Cross(pos, forward, up).
-
+        // The tangent space at pos is 3D, so right is the one direction
+        // orthogonal to pos, forward and up. The 4D cross product of three
+        // vectors gives exactly that.
         this.right = cross4(pos, forward, up).normalize();
     }
 
     // Generalized cross product in R^4
     // Returns vector orthogonal to a, b, c
     private Vec4 cross4(Vec4 a, Vec4 b, Vec4 c) {
-        // Determinant expansion simulation
-        // | i j k l |
+        // Cofactor expansion along the top row of
+        // | i  j  k  l |
         // | x1 y1 z1 w1|
         // | x2 y2 z2 w2|
         // | x3 y3 z3 w3|
@@ -72,11 +58,7 @@ public class Camera {
     }
 
     public Ray generateRay(double u, double v) {
-        // u, v in [-1, 1] usually (ndc)
-        // Adjust for aspect ratio elsewhere or pass in correct u/v scaling?
-        // Assume u, v are scaled by tan(fov/2).
-
-        // dir = normalize(forward + right * u + up * v)
+        // u and v arrive already scaled by tan(fov/2) and the aspect ratio.
         Vec4 dir = forward.plus(right.scale(u)).plus(up.scale(v)).normalize();
 
         return new Ray(pos, dir);
@@ -116,12 +98,9 @@ public class Camera {
         this.forward = fNew.normalize();
         this.right = rNew.normalize();
 
-        // Orthogonalize up to ensure stability
-        this.up = cross4(right, pos, forward).normalize(); // Order matters for coord system (R, P, F -> U?)
-        // R = P x F x U.
-        // U = R x P x F ?
-        // Let's rely on orthogonalization against plane
-        // Or cross4.
+        // Rebuild up from the other three so the frame stays orthonormal.
+        // The argument order sets the handedness.
+        this.up = cross4(right, pos, forward).normalize();
     }
 
     // Rotate around Right vector (Pitch)

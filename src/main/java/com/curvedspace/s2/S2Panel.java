@@ -99,14 +99,7 @@ public class S2Panel extends JPanel {
 
             drawCircle3D(g2, cx, cy, radius, z, rCircle, viewMat, (i == 9));
         }
-        // Longitudes for Southern Hemisphere
-        // We can just draw full longitudes but clip? No, too complex.
-        // Let's just draw full longitude circles but colored differently?
-        // Just drawing the grid on the whole sphere is easier, but let's try to
-        // distinctive bottom.
-        // Let's draw standard grid faint everywhere, and extra green in south?
-
-        // Draw Full faint grid
+        // Faint grid over the whole sphere
         g2.setColor(new Color(40, 40, 40));
         // Equator
         // drawCircle(g2, cx, cy, radius, new Vec3(1, 0, 0), new Vec3(0, 1, 0),
@@ -123,15 +116,9 @@ public class S2Panel extends JPanel {
         g2.setColor(new Color(255, 255, 0, 150)); // Yellow translucent
         int numRays = 24;
         for (int i = 0; i < numRays; i++) {
-            // Fan of rays from Character.
-            // Tangent plane at charPos.
-            // Basis vectors for tangent plane?
-            // If charPos is approx (1,0,0), tangent plane is YZ.
-            // We want rays generally going "Up" and "Forward/Backward"?
-            // Let's form an orthonormal basis (u, v) for tangent plane at charPos.
-            // Normal = charPos.
-            // Up = (0, 0, 1).
-            // If charPos is exactly (0,0,1), this fails, but it's not.
+            // Fan of rays from the character. Build an orthonormal basis for
+            // the tangent plane at charPos from the up vector (0, 0, 1). This
+            // would fail if charPos were exactly the pole, which it isn't.
             Vec3 up = new Vec3(0, 0, 1);
             Vec3 right = up.cross(charPos).normalize();
             Vec3 forward = charPos.cross(right).normalize(); // This 'forward' points roughly Up along meridian.
@@ -180,12 +167,7 @@ public class S2Panel extends JPanel {
 
     private void drawBillboard(Graphics2D g2, int cx, int cy, double r, Vec3 p, Mat4 view, String text, int fontSize) {
         Vec3 pt = transform(p, view);
-        // Fade if on back side
-        // Note: transforming logic. For display Z is depth?
-        // Our viewMat maps World to Screen.
-        // Usually Screen Z is depth.
-        // Let's use alpha based on Z.
-
+        // After the view transform z is depth, so fade anything on the back side.
         int alpha = (pt.z > 0) ? 255 : 60;
         g2.setColor(new Color(255, 255, 255, alpha));
         g2.setFont(new java.awt.Font("Segoe UI Emoji", java.awt.Font.PLAIN, fontSize));
@@ -239,11 +221,7 @@ public class S2Panel extends JPanel {
         List<Integer> yPoints = new ArrayList<>();
 
         for (int i = 0; i <= steps; i++) {
-            double t = i * Math.PI / steps; // 0 to PI check (Max possible)
-            // But we actually want to continue until we hit Z < 0.
-            // Let's use a slightly longer range just in case, or adaptive step.
-            // Simple: just check Z.
-
+            double t = i * Math.PI / steps;
             Vec3 p = start.scale(Math.cos(t)).plus(dir.scale(Math.sin(t)));
 
             if (p.z < -0.01) { // Stop if we go below equator (allow tiny epsilon)

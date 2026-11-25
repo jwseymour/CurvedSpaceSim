@@ -22,16 +22,13 @@ public class RayTracer {
     }
 
     public void render(BufferedImage image) {
-        // Simple parallel rendering
+        // One task per scanline
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
         double aspect = (double) width / height;
-        // Assume default fov 60 deg? Camera handles fov, but we need scale.
-        // Let's assume camera generates based on raw u,v scale?
-        // Actually camera expects 'u' 'v' to be spatial.
-        // u = (x / w * 2 - 1) * aspect * tan(fov/2)
-
+        // The camera takes u, v already scaled by tan(fov/2), with u also
+        // scaled by the aspect ratio.
         double fovY = camera.getFov();
         double scaleY = Math.tan(fovY / 2.0);
         double scaleX = scaleY * aspect;
@@ -40,7 +37,6 @@ public class RayTracer {
             final int finalY = y;
             executor.submit(() -> {
                 for (int x = 0; x < width; x++) {
-                    // NDC coordinates
                     double u = ((x + 0.5) / width * 2 - 1) * scaleX;
                     double v = ((1.0 - (finalY + 0.5) / height) * 2 - 1) * scaleY; // flip Y
 

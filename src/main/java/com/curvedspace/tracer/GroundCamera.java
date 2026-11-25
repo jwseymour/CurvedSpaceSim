@@ -3,22 +3,14 @@ package com.curvedspace.tracer;
 import com.curvedspace.math.Vec4;
 
 public class GroundCamera extends Camera {
-    // "Great Sphere" ground is defined by y=0 (relative to south pole -1)
-    // Actually, ground center is (0,-1,0,0). Equator is y=0.
-    // If we want height H, we want constant y coordinate.
-    // P = (x, y, z, w). H = asin(y).
-    // To stay at height H, we must keep y constant.
-    // Movement must be restricted to the x,z,w hyperplane?
-
+    // The ground is a sphere centred on (0,-1,0,0). Height above it is asin(y),
+    // so walking at a fixed height means keeping the y coordinate fixed.
     private final double heightY;
 
     public GroundCamera(double heightAngle, Vec4 pos, Vec4 target, Vec4 upHint, double fov) {
         super(pos, target, upHint, fov);
-        // We enforce y component = sin(heightAngle)
         this.heightY = Math.sin(heightAngle);
     }
-
-    // cross4 and det3 removed (using Vec4.cross now)
 
     @Override
     public void moveForward(double dt) {
@@ -67,30 +59,11 @@ public class GroundCamera extends Camera {
 
         if (newRight.length() > 1e-4) {
             this.right = newRight.normalize();
-            // Recalculate Up to be orthogonal to Forward and Right (Preserves Pitch)
-            // But forward is dirty!
-            // We want 'Up' to be in the plane defined by 'Old Forward' and 'True Up'.
-            // Actually, we want to Keep 'Pitch'.
-            // Pitch is angle between Forward and Horizon.
-            // If we keep 'Up' orthogonal to 'Right' and 'Forward', we are good.
-            // Wait, we need to FIX the basis.
-
-            // Current State:
-            // 'pos' is snapped (NEW).
-            // 'right' is horizontal (NEW, perp to pos and TrueUp).
-            // 'forward' is OLD (transported, not perp to pos).
-
-            // We want to construct a new basis (F, U, R) at 'pos'.
-            // Constraint 1: R is horizontal (already done).
-            // Constraint 2: Maintain Pitch.
-            // Let's deduce 'Forward' and 'Up' from the old Forward's projection?
-
-            // Simpler approach that works for small steps:
-            // 1. We computed 'right' from 'forward' and 'trueUp'.
-            // 2. Now compute 'up' from 'right' and 'forward'.
+            // forward was transported before pos was snapped, so it is no
+            // longer exactly tangent at pos. Rebuild up from right and
+            // forward, then forward from up and right. For small steps this
+            // keeps the pitch.
             this.up = Vec4.cross(pos, right, forward).normalize();
-
-            // 3. Now force 'forward' to be orthogonal to 'up' and 'right'.
             this.forward = Vec4.cross(pos, up, right).normalize();
 
         } else {
@@ -102,15 +75,13 @@ public class GroundCamera extends Camera {
     }
 
     private Vec4 transport(Vec4 v, Vec4 pOld, Vec4 dir, double c, double s) {
-        // v is vector at pOld.
-        // We want v at pNew.
-        // Component along dir:
+        // Parallel transport of v along the geodesic from pOld in direction
+        // dir. The part of v along dir rotates with the geodesic and the
+        // rest is unchanged.
         double val = v.dot(dir);
         Vec4 v_along = dir.scale(val);
         Vec4 v_perp = v.minus(v_along);
 
-        // Rotated component
-        // dir maps to (-pOld * s + dir * c)
         Vec4 v_rot = pOld.scale(-s).plus(dir.scale(c)).scale(val);
 
         return v_perp.plus(v_rot).normalize();
@@ -136,6 +107,4 @@ public class GroundCamera extends Camera {
         this.forward = newForward;
         this.right = newRight;
     }
-
-    // cross4 and det3 removed (using Vec4.cross now)
 }
